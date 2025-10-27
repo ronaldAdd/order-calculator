@@ -111,8 +111,6 @@ export default function UploadExcelPage() {
   const [forceRenderKey, setForceRenderKey] = useState(Date.now()) // untuk paksa rerender
   const [, setIsMappingFieldReady] = useState(false)
   const rowsPerPage = 10
-  const [assignedSizes, setAssignedSizes] = useState<{ [rowIdx: number]: string }>({});
-
 
   useEffect(() => {
     const fetchCollectors = async () => {
@@ -693,7 +691,7 @@ export default function UploadExcelPage() {
 
   return (
     <MainLayout title="Upload File Excel">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Upload File Excel (.xlsx) / CSV</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">Upload File Excel (.xlsx)</h1>
 
       <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-6 rounded shadow max-w-xl mx-auto">
         <input
@@ -726,6 +724,29 @@ export default function UploadExcelPage() {
         <>
           <div className="overflow-auto w-full max-h-[70vh] mt-8 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
 
+          <div className="mt-4 mb-4 flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Assign collector for all rows:
+            </label>
+            <ReactSelect
+              options={collectorOptions}
+              onChange={(option) => {
+                const selected = option as SingleValue<{ value: string; label: string }>
+                const selectedId = selected?.value || ''
+                // update semua row dengan collector yang dipilih
+                const newAssigned: { [rowIdx: number]: string } = {}
+                const rowCount = data?.length ? data.length - 1 : 0 // exclude header
+
+                for (let i = 0; i < rowCount; i++) {
+                  newAssigned[i] = selectedId
+                }
+
+                setAssignedCollectors(newAssigned)
+              }}
+              styles={reactSelectStyles}
+              placeholder="Pilih collector..."
+            />
+          </div>
 
             <table className="min-w-full text-base text-left border-collapse border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100">
               <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800">
@@ -760,12 +781,10 @@ export default function UploadExcelPage() {
                       </th>
                     )
                   })}
-                  {/* ✅ Tampilkan kolom Assigned Size hanya jika kolom "size" belum ada */}
-                  {!Object.values(headerMapping).includes('size') && (
-                    <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center font-semibold">
-                      Pilih Size
-                    </th>
-                  )}
+                  {/* ✅ Tambahan kolom assign collector */}
+                  <th className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-center font-semibold">
+                    Assigned Collector
+                  </th>                  
                 </tr>
               </thead>
 <tbody>
@@ -837,25 +856,24 @@ export default function UploadExcelPage() {
           )
         })}
 
-{/* ✅ Tampilkan dropdown Assign Size kalau kolom "size" belum dimapping */}
-{!Object.values(headerMapping).includes('size') && (
-  <td className="border px-4 py-2">
-    <select
-      value={assignedSizes[globalRowIdx] || ''}
-      onChange={(e) => {
-        const val = e.target.value;
-        setAssignedSizes((prev) => ({ ...prev, [globalRowIdx]: val }));
-      }}
-      className="w-full px-2 py-1 rounded border border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-    >
-      <option value="">-- pilih ukuran --</option>
-      {['2XL', 'XL', 'L', 'M', 'S'].map((opt) => (
-        <option key={opt} value={opt}>{opt}</option>
-      ))}
-    </select>
-  </td>
-)}
-
+        {/* ✅ Kolom Assigned Collector */}
+        <td>
+          <ReactSelect
+            options={collectorOptions}
+            value={
+              collectorOptions.find(
+                (opt) => opt.value === assignedCollectors[globalRowIdx]
+              ) || null
+            }
+            onChange={(selected) => {
+              const value =
+                (selected as { value: string; label: string } | null)?.value ||
+                ''
+              handleCollectorChange(globalRowIdx, value)
+            }}
+            styles={reactSelectStyles}
+          />
+        </td>
 
         {/* 🗑 Tombol hapus baris */}
         <td className="border px-4 py-2 text-center">
@@ -934,15 +952,21 @@ export default function UploadExcelPage() {
             {/* KANAN: Tombol-tombol aksi */}
             <div className="col-span-12 md:col-span-2 flex flex-col space-y-2">
 
+              <button
+                onClick={handleResetCollectors}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Reset Collectors
+              </button>
 
-              {/* <button
+              <button
                 onClick={handleValidateRows}
                 className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
               >
                 Row Level Validation
-              </button> */}
+              </button>
 
-              {/* <button
+              <button
                 onClick={handleSaveMappingAndInsert}
                 disabled={!isValidated || saving}
                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
@@ -974,9 +998,33 @@ export default function UploadExcelPage() {
                 ) : (
                   'Commit to Database'
                 )}
-              </button> */}
+              </button>
 
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Store Mapping Configuration
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nama Template"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  className="mb-2 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+                />
+                <button
+                  onClick={handleSaveTemplate}
+                  className="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700 transition"
+                >
+                  💾 Save
+                </button>
+              </div>
 
+              <button
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                onClick={() => setTemplateModalOpen(true)}                
+              >
+                📂 Load Template
+              </button>
 
             </div>
           </div>

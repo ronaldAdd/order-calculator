@@ -59,14 +59,14 @@ const debtorSchema = z
   .object({
     fullName: z
       .string({ required_error: 'First name is required' })
-      .min(2, 'First name must be at least 2 characters'),
+      .min(2, 'First name must be at least 2 characters')
+      .optional(),
 
     firstName: z
       .string({ required_error: 'First name is required' })
       .min(2, 'First name must be at least 2 characters')
       .max(50, 'First name must be at most 50 characters')
-      .regex(/^[a-zA-Z\s-]+$/, 'First name must only contain letters, spaces, or hyphens')
-      .optional(),
+      .regex(/^[a-zA-Z\s-]+$/, 'First name must only contain letters, spaces, or hyphens'),
 
     lastName: z
       .string({ required_error: 'Last name is required' })
@@ -75,10 +75,6 @@ const debtorSchema = z
       .regex(/^[a-zA-Z\s-]+$/, 'Last name must only contain letters, spaces, or hyphens')
       .optional(),
 
-    nationalId: z
-      .string({ required_error: 'National ID is required' })
-      .length(16, 'National ID must be exactly 16 digits')
-      .regex(/^[0-9]+$/, 'National ID must contain only numbers'),
 
     dob: z.preprocess((val) => {
       if (typeof val !== 'string') return val

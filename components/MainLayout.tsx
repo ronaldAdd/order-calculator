@@ -73,17 +73,17 @@ export default function MainLayout({ children }: MainLayoutProps) {
       role: ['admin'],
       subItems: [
         { label: 'Lists', href: '/admin/user-lists' },
-        { label: 'Audit Log', href: '/admin/audit-log' },
+        // { label: 'Audit Log', href: '/admin/audit-log' },
       ],
     },
+    // {
+    //   label: 'Vest Order Calculator',
+    //   href: '/admin/debtors',
+    //   icon: '💳', // kartu kredit / piutang
+    //   role: ['admin'],
+    // },
     {
-      label: 'Vest Order Calculator',
-      href: '/admin/debtors',
-      icon: '💳', // kartu kredit / piutang
-      role: ['admin'],
-    },
-    {
-      label: 'Bulk upload',
+      label: 'Upload Data',
       href: '/admin/upload-file',
       icon: '💳', // kartu kredit / piutang
       role: ['admin'],

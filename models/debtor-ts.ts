@@ -10,6 +10,7 @@ export interface DebtorAttributes {
   firstName?: string
   lastName?: string
   fullName?: string
+  size?: string
   sex?: string
   dob?: Date
   nationalId?: string
@@ -67,6 +68,7 @@ class Debtor extends Model<DebtorAttributes, DebtorCreationAttributes>
   public firstName?: string
   public lastName?: string
   public fullName?: string
+  public size?: string
   public sex?: string
   public dob?: Date
   public nationalId?: string
@@ -124,6 +126,7 @@ Debtor.init(
     firstName: { type: DataTypes.STRING, allowNull: true },
     lastName: { type: DataTypes.STRING, allowNull: true },
     fullName: { type: DataTypes.STRING, allowNull: true },
+    size: { type: DataTypes.STRING, allowNull: true },
     sex: { type: DataTypes.STRING, allowNull: true },
     dob: { type: DataTypes.DATEONLY, allowNull: true },
     nationalId: { type: DataTypes.STRING, allowNull: true, unique: true },
