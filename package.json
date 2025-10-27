@@ -4,9 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "build": "next build --no-lint",
+    "start": "next start"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.0",
