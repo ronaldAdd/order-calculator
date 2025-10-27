@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+  --background: var(--background);
+  --foreground:  var(--foreground);
+  }
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Contoh styling dengan dark mode */
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Outfit', sans-serif;
+}
+
+
+:root {
+  --tw-bg: #ffffff;
+  --tw-bg-hover: #f3f4f6; /* gray-100 */
+  --tw-border-color: #d1d5db; /* gray-300 */
+  --tw-text-color: #111827; /* gray-900 */
+  --tw-placeholder-color: #6b7280; /* gray-500 */
+}
+
+.dark {
+  --tw-bg: #1f2937; /* gray-800 */
+  --tw-bg-hover: #374151; /* gray-700 */
+  --tw-border-color: #4b5563; /* gray-600 */
+  --tw-text-color: #f9fafb; /* gray-50 */
+  --tw-placeholder-color: #9ca3af; /* gray-400 */
+}
