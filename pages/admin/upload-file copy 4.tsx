@@ -112,7 +112,6 @@ export default function UploadExcelPage() {
   const [, setIsMappingFieldReady] = useState(false)
   const rowsPerPage = 10
   const [assignedSizes, setAssignedSizes] = useState<{ [rowIdx: number]: string }>({});
-  const [sizeSummary, setSizeSummary] = useState<{ [key: string]: number }>({});
 
 
   useEffect(() => {
@@ -166,38 +165,6 @@ export default function UploadExcelPage() {
       fetchTemplates(1)
     }
   }, [templateModalOpen])
-
-  useEffect(() => {
-    if (!data) return;
-
-    const summary: Record<string, number> = {};
-
-    // Ambil semua size dari data kolom "size"
-    const sizeIdx = data[0]?.findIndex((h, idx) => headerMapping[idx] === 'size');
-    if (sizeIdx !== -1 && sizeIdx !== undefined) {
-      data.slice(1).forEach((row) => {
-        const val = row[sizeIdx]?.trim();
-        if (val) summary[val] = (summary[val] || 0) + 1;
-      });
-    }
-
-    // Tambahkan dari assignedSizes juga (kalau kolom size belum ada)
-    Object.values(assignedSizes).forEach((val) => {
-      if (val) summary[val] = (summary[val] || 0) + 1;
-    });
-
-    setSizeSummary(summary);
-  }, [data, assignedSizes, headerMapping]);
-
-
-  // ✅ Reset assignedSizes kalau kolom "size" sudah dimapping
-  useEffect(() => {
-    const isSizeMapped = Object.values(headerMapping).includes('size');
-    if (isSizeMapped && Object.keys(assignedSizes).length > 0) {
-      setAssignedSizes({});
-      toast.info('Kolom "size" sudah dipilih. Dropdown "Pilih Size" dikosongkan untuk mencegah duplikasi.');
-    }
-  }, [headerMapping]);
 
 
   const fetchDebtorFields = async () => {
@@ -775,21 +742,9 @@ export default function UploadExcelPage() {
                           className="w-full px-2 py-1 border border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">-- Choose Field --</option>
-                          {mappingFields
-                            .filter((field) => {
-                              // Ambil semua field yang sudah dipilih
-                              const usedFields = Object.values(headerMapping);
-                              // Boleh muncul kalau:
-                              // 1. Field belum dipilih di kolom lain, atau
-                              // 2. Field ini sedang digunakan oleh kolom ini sendiri
-                              return !usedFields.includes(field.value) || headerMapping[idx] === field.value;
-                            })
-                            .map((field) => (
-                              <option key={field.value} value={field.value}>
-                                {field.label}
-                              </option>
-                            ))}
-
+                          {mappingFields.map((field) => (
+                            <option key={field.value} value={field.value}>{field.label}</option>
+                          ))}
                         </select>
                         {mappedField?.type && (
                           <div className="mt-1 text-xs italic text-gray-500 dark:text-gray-400">{mappedField.type}</div>
@@ -882,24 +837,24 @@ export default function UploadExcelPage() {
           )
         })}
 
-        {/* ✅ Tampilkan dropdown Assign Size kalau kolom "size" belum dimapping */}
-        {!Object.values(headerMapping).includes('size') && (
-          <td className="border px-4 py-2">
-            <select
-              value={assignedSizes[globalRowIdx] || ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                setAssignedSizes((prev) => ({ ...prev, [globalRowIdx]: val }));
-              }}
-              className="w-full px-2 py-1 rounded border border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
-            >
-              <option value="">-- pilih ukuran --</option>
-              {['2XL', 'XL', 'L', 'M', 'S'].map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-          </td>
-        )}
+{/* ✅ Tampilkan dropdown Assign Size kalau kolom "size" belum dimapping */}
+{!Object.values(headerMapping).includes('size') && (
+  <td className="border px-4 py-2">
+    <select
+      value={assignedSizes[globalRowIdx] || ''}
+      onChange={(e) => {
+        const val = e.target.value;
+        setAssignedSizes((prev) => ({ ...prev, [globalRowIdx]: val }));
+      }}
+      className="w-full px-2 py-1 rounded border border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+    >
+      <option value="">-- pilih ukuran --</option>
+      {['2XL', 'XL', 'L', 'M', 'S'].map((opt) => (
+        <option key={opt} value={opt}>{opt}</option>
+      ))}
+    </select>
+  </td>
+)}
 
 
         {/* 🗑 Tombol hapus baris */}
@@ -937,24 +892,6 @@ export default function UploadExcelPage() {
               Next
             </button>
           </div>
-
-{Object.keys(sizeSummary).length > 0 && (
-  <div className="mt-6 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100">
-    <h3 className="font-semibold mb-3 text-lg">📦 Size Summary</h3>
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-      {Object.entries(sizeSummary).map(([size, count]) => (
-        <div
-          key={size}
-          className="bg-white dark:bg-gray-700 rounded-xl shadow-md p-3 text-center border border-gray-300 dark:border-gray-600"
-        >
-          <div className="text-sm font-semibold">{size}</div>
-          <div className="text-gray-600 dark:text-gray-300">{count} pcs</div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
-
 
           <div className="mt-6 grid grid-cols-12 gap-4 items-start">
             {/* KIRI: Console Output (selalu muncul) */}
