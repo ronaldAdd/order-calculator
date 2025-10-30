@@ -113,6 +113,11 @@ export default function UploadExcelPage() {
   const rowsPerPage = 10
   const [assignedSizes, setAssignedSizes] = useState<{ [rowIdx: number]: string }>({});
   const [sizeSummary, setSizeSummary] = useState<{ [key: string]: number }>({});
+  const [qty, setQty] = useState(13);
+  const [unitPrice, setUnitPrice] = useState(15.33);
+  const [shipping, setShipping] = useState(114.00);
+  const [verificationMsg, setVerificationMsg] = useState<string>("");
+
 
 
   useEffect(() => {
@@ -198,6 +203,22 @@ export default function UploadExcelPage() {
       toast.info('Kolom "size" sudah dipilih. Dropdown "Pilih Size" dikosongkan untuk mencegah duplikasi.');
     }
   }, [headerMapping]);
+
+  // 🔍 Verifikasi kesesuaian antara QTY dan total distribusi size
+  useEffect(() => {
+    if (!qty || Object.keys(sizeSummary).length === 0) return;
+
+    const distTotal = Object.values(sizeSummary).reduce((a, b) => a + b, 0);
+
+    if (distTotal === qty) {
+      setVerificationMsg(`✅ OK — ${distTotal} pieces total`);
+    } else if (distTotal < qty) {
+      setVerificationMsg(`⚠️ ${qty - distTotal} piece(s) missing`);
+    } else {
+      setVerificationMsg(`⚠️ ${distTotal - qty} piece(s) extra`);
+    }
+  }, [qty, sizeSummary]);
+
 
 
   const fetchDebtorFields = async () => {
@@ -755,6 +776,102 @@ export default function UploadExcelPage() {
         )}
       </form>
 
+      {/* ✅ PRICE CALCULATION FORM */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded shadow mt-8 max-w-2xl mx-auto">
+        <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
+          💰 Price Calculation
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              QTY (Pieces)
+            </label>
+            <input
+              type="number"
+              value={qty}
+              onChange={(e) => setQty(Number(e.target.value))}
+              className="mt-1 w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Unit Price (USD/PC)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={unitPrice}
+              onChange={(e) => setUnitPrice(Number(e.target.value))}
+              className="mt-1 w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Shipping (USD)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={shipping}
+              onChange={(e) => setShipping(Number(e.target.value))}
+              className="mt-1 w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2"
+            />
+          </div>
+        </div>
+
+        {/* hasil perhitungan */}
+        <div className="mt-6 overflow-x-auto">
+          <table className="min-w-full text-sm border border-gray-300 dark:border-gray-700">
+            <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+              <tr>
+                <th className="border px-3 py-2">QTY(Pieces)</th>
+                <th className="border px-3 py-2">USD/PC</th>
+                <th className="border px-3 py-2">Amount(USD)</th>
+                <th className="border px-3 py-2">Shipping(USD)</th>
+                <th className="border px-3 py-2">Total(USD)</th>
+                <th className="border px-3 py-2">Price(USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="text-center text-gray-800 dark:text-gray-100">
+                <td className="border px-3 py-2">{qty}</td>
+                <td className="border px-3 py-2">${unitPrice.toFixed(2)}</td>
+                <td className="border px-3 py-2">${(qty * unitPrice).toFixed(2)}</td>
+                <td className="border px-3 py-2">${shipping.toFixed(2)}</td>
+                <td className="border px-3 py-2">
+                  ${(qty * unitPrice + shipping).toFixed(2)}
+                </td>
+                <td className="border px-3 py-2">
+                  {qty > 0 ? `$${((qty * unitPrice + shipping) / qty).toFixed(2)}` : '$0.00'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+{/* ✅ Verification Section */}
+<div className="mt-3 text-sm font-medium text-gray-800 dark:text-gray-100">
+  <div className="flex items-center space-x-2">
+    <span className="font-semibold">Verification:</span>
+    <span
+      className={
+        verificationMsg.includes("OK")
+          ? "text-green-600 dark:text-green-400"
+          : "text-yellow-600 dark:text-yellow-400"
+      }
+    >
+      {verificationMsg || "—"}
+    </span>
+  </div>
+</div>
+
+      </div>
+
+
+
+
       {paginatedData && (
         <>
           <div className="overflow-auto w-full max-h-[70vh] mt-8 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
@@ -938,22 +1055,22 @@ export default function UploadExcelPage() {
             </button>
           </div>
 
-{Object.keys(sizeSummary).length > 0 && (
-  <div className="mt-6 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100">
-    <h3 className="font-semibold mb-3 text-lg">📦 Size Summary</h3>
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-      {Object.entries(sizeSummary).map(([size, count]) => (
-        <div
-          key={size}
-          className="bg-white dark:bg-gray-700 rounded-xl shadow-md p-3 text-center border border-gray-300 dark:border-gray-600"
-        >
-          <div className="text-sm font-semibold">{size}</div>
-          <div className="text-gray-600 dark:text-gray-300">{count} pcs</div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+          {Object.keys(sizeSummary).length > 0 && (
+            <div className="mt-6 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100">
+              <h3 className="font-semibold mb-3 text-lg">📦 Size Summary</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {Object.entries(sizeSummary).map(([size, count]) => (
+                  <div
+                    key={size}
+                    className="bg-white dark:bg-gray-700 rounded-xl shadow-md p-3 text-center border border-gray-300 dark:border-gray-600"
+                  >
+                    <div className="text-sm font-semibold">{size}</div>
+                    <div className="text-gray-600 dark:text-gray-300">{count} pcs</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
 
           <div className="mt-6 grid grid-cols-12 gap-4 items-start">
