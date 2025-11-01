@@ -13,6 +13,8 @@ import ReactSelect from 'react-select'
 import type { SingleValue } from 'react-select'
 import reactSelectStyles from '@/lib/reactSelectStyles'
 import { validateMappedDebtorZod } from '@/utils/validateMappedDebtorZod'
+import useUserStore from '../../src/store/useUserStore'
+
 
 interface MappingField {
   label: string
@@ -117,6 +119,11 @@ export default function UploadExcelPage() {
   const [unitPrice, setUnitPrice] = useState(15.33);
   const [shipping, setShipping] = useState(114.00);
   const [verificationMsg, setVerificationMsg] = useState<string>("");
+  const [paymentThru, setPaymentThru] = useState<string[]>([]);
+  const user = useUserStore((state) => state.user)
+  const [methods, setMethods] = useState<string[]>(['Cash', 'Bank Transfer', 'Zelle', 'Card']);
+  const [newMethod, setNewMethod] = useState('');
+
 
 
 
@@ -775,6 +782,92 @@ export default function UploadExcelPage() {
           </div>
         )}
       </form>
+
+      {/* ✅ PAYMENT THRU SECTION */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded shadow mt-8 max-w-2xl mx-auto">
+        <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
+          💳 Payment Thru
+        </h2>
+
+        {/* Input Preparer */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Preparer
+          </label>
+          <input
+            type="text"
+            value={user?.name || ''}
+            readOnly
+            className="w-full rounded border border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+          />
+        </div>
+
+        {/* Checkbox group */}
+        <div className="text-gray-800 dark:text-gray-100">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Payment Methods
+          </label>
+
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:gap-x-6 gap-y-3">
+            {methods.map((method) => (
+              <label key={method} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  value={method}
+                  checked={paymentThru.includes(method)}
+                  onChange={(e) => {
+                    const { value, checked } = e.target;
+                    setPaymentThru((prev) =>
+                      checked ? [...prev, value] : prev.filter((m) => m !== value)
+                    );
+                  }}
+                  className="w-5 h-5 accent-blue-600"
+                />
+                <span>{method}</span>
+              </label>
+            ))}
+          </div>
+
+          {/* Tambah custom method */}
+          <div className="mt-4 flex space-x-2">
+            <input
+              type="text"
+              placeholder="Add custom payment method..."
+              value={newMethod}
+              onChange={(e) => setNewMethod(e.target.value)}
+              className="flex-1 rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+            />
+            <button
+              onClick={() => {
+                if (
+                  newMethod.trim() &&
+                  !methods.includes(newMethod.trim())
+                ) {
+                  setMethods((prev) => [...prev, newMethod.trim()]);
+                  setNewMethod('');
+                }
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        {/* tampilkan hasil pilihan */}
+        {paymentThru.length > 0 ? (
+          <div className="mt-4 text-sm text-gray-700 dark:text-gray-300">
+            <span className="font-semibold">Selected:</span>{' '}
+            {paymentThru.join(', ')}
+          </div>
+        ) : (
+          <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+            No payment method selected.
+          </div>
+        )}
+      </div>
+
+
 
       {/* ✅ PRICE CALCULATION FORM */}
       <div className="bg-white dark:bg-gray-800 p-6 rounded shadow mt-8 max-w-2xl mx-auto">
