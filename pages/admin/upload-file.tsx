@@ -1262,13 +1262,13 @@ const drawRect = (
 
 
 const handleExportToPDF = async () => {
-  // ✅ Checkbox validation
+  // ✅ Validate checkbox
   if (!isPolicyAgreed) {
     toast.error("⚠️ You must agree to the Policy before exporting to PDF!");
     return;
   }
 
-  // ✅ Validate table data
+  // ✅ Validate data
   if (!data || data.length === 0) {
     toast.error("⚠️ No table data available to export.");
     return;
@@ -1306,7 +1306,7 @@ const handleExportToPDF = async () => {
     tableData: tableRows,
   };
 
-  // 🧾 Create new PDF
+  // 🧾 Create PDF
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4
   const { width, height } = page.getSize();
@@ -1314,16 +1314,16 @@ const handleExportToPDF = async () => {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // 🖋 drawText helper (with types)
+  // 🖋 Helper: draw text (handles string | number)
   const drawText = (
-    text: string,
+    text: string | number,
     x: number,
     y: number,
     size: number = 10,
     boldFont: boolean = false,
     color = rgb(0, 0, 0)
   ) => {
-    page.drawText(String(text || ""), {
+    page.drawText(String(text ?? ""), {
       x,
       y,
       size,
@@ -1332,7 +1332,7 @@ const handleExportToPDF = async () => {
     });
   };
 
-  // 🟦 drawRect helper (with types)
+  // 🟦 Helper: draw rectangle
   const drawRect = (
     x: number,
     y: number,
@@ -1352,7 +1352,7 @@ const handleExportToPDF = async () => {
     });
   };
 
-  // 🧩 Wrap text helper
+  // 🧩 Helper: wrap long text
   const wrapText = (text: string, maxWidth: number, fontSize = 10) => {
     const words = text.split(" ");
     let line = "";
@@ -1371,7 +1371,7 @@ const handleExportToPDF = async () => {
     return lines;
   };
 
-  // Layout
+  // 📄 Start writing content
   let y = height - 60;
   const margin = 40;
 
