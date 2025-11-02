@@ -124,7 +124,11 @@ export default function UploadExcelPage() {
   const [methods, setMethods] = useState<string[]>(['Cash', 'Bank Transfer', 'Zelle', 'Card']);
   const [newMethod, setNewMethod] = useState('');
 
-
+  const [productCode, setProductCode] = useState('');
+  const [productName, setProductName] = useState('');
+  const [departmentName, setDepartmentName] = useState('');
+  const [projectName, setProjectName] = useState('');
+  const [systemDate] = useState(() => new Date().toLocaleDateString());
 
 
   useEffect(() => {
@@ -866,6 +870,83 @@ export default function UploadExcelPage() {
           </div>
         )}
       </div>
+
+
+{/* ✅ PRODUCT INFORMATION FORM */}
+<div className="bg-white dark:bg-gray-800 p-6 rounded shadow mt-8 max-w-2xl mx-auto">
+  <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
+    🧾 Product Information
+  </h2>
+
+  {/* Product Code */}
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      Product Code
+    </label>
+    <input
+      type="text"
+      value={productCode}
+      onChange={(e) => setProductCode(e.target.value)}
+      placeholder="Enter product code"
+      className="w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+    />
+  </div>
+
+  {/* Product Name */}
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      Product Name
+    </label>
+    <input
+      type="text"
+      value={productName}
+      onChange={(e) => setProductName(e.target.value)}
+      placeholder="Enter product name"
+      className="w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+    />
+  </div>
+
+  {/* Department Name */}
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      Department Name
+    </label>
+    <input
+      type="text"
+      value={departmentName}
+      onChange={(e) => setDepartmentName(e.target.value)}
+      placeholder="Enter department name"
+      className="w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+    />
+  </div>
+
+  {/* Project Name */}
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      Project Name
+    </label>
+    <input
+      type="text"
+      value={projectName}
+      onChange={(e) => setProjectName(e.target.value)}
+      placeholder="Enter project name"
+      className="w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+    />
+  </div>
+
+  {/* System Date */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      System Date
+    </label>
+    <input
+      type="text"
+      value={systemDate}
+      readOnly
+      className="w-full rounded border border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+    />
+  </div>
+</div>
 
 
 
