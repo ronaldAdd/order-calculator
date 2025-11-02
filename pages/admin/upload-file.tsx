@@ -679,9 +679,25 @@ export default function UploadExcelPage() {
 };
 
 
-    const drawRect = (x, y, w, h, fillColor, stroke = true) => {
-      page.drawRectangle({ x, y, width: w, height: h, color: fillColor, borderColor: rgb(0, 0, 0), borderWidth: stroke ? 0.5 : 0 });
-    };
+const drawRect = (
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  fillColor: any,
+  stroke: boolean = true
+) => {
+  page.drawRectangle({
+    x,
+    y,
+    width: w,
+    height: h,
+    color: fillColor,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: stroke ? 0.5 : 0,
+  });
+};
+
 
     let y = height - 60;
     const margin = 40;
