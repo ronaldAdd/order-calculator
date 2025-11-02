@@ -1292,6 +1292,21 @@ export default function UploadExcelPage() {
           }
 
           // 🧩 default cell rendering
+          // return (
+          //   <td
+          //     key={cellIdx}
+          //     className={`border px-6 py-3 ${
+          //       isError
+          //         ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+          //         : 'border-gray-300 dark:border-gray-600'
+          //     }`}
+          //     title={isError ? rowErrors[globalRowIdx][field] : ''}
+          //   >
+          //     {cell || ''}
+          //   </td>
+          // )
+
+          // 🧩 default cell rendering
           return (
             <td
               key={cellIdx}
