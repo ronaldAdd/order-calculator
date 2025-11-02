@@ -1262,7 +1262,7 @@ const drawRect = (
 
 
 const handleExportToPDF = async () => {
-  // ✅ Validate checkbox
+  // ✅ Checkbox validation
   if (!isPolicyAgreed) {
     toast.error("⚠️ You must agree to the Policy before exporting to PDF!");
     return;
@@ -1371,7 +1371,7 @@ const handleExportToPDF = async () => {
     return lines;
   };
 
-  // 📄 Start writing content
+  // Layout
   let y = height - 60;
   const margin = 40;
 
@@ -1412,7 +1412,7 @@ const handleExportToPDF = async () => {
   // Values
   sizeValues.forEach((v, i) => {
     drawRect(margin + i * colW, y - 18, colW, 18, rgb(1, 1, 1));
-    drawText(String(v), margin + i * colW + 25, y - 13);
+    drawText(v, margin + i * colW + 25, y - 13);
   });
   y -= 30;
 
@@ -1439,7 +1439,7 @@ const handleExportToPDF = async () => {
 
   values.forEach((v, i) => {
     drawRect(margin + i * 90, y - 18, 90, 18, rgb(1, 1, 1));
-    drawText(String(v), margin + i * 90 + 5, y - 13, 9);
+    drawText(v, margin + i * 90 + 5, y - 13, 9);
   });
   y -= 35;
 
