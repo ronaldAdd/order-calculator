@@ -659,51 +659,71 @@ const handleExportToPDF = async () => {
   });
   y -= 40;
 
-  // ---------- SECTION 4: Uniform Policy Acknowledgment Worksheet ----------
-  drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
-  drawText("Uniform Policy Acknowledgment Worksheet", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
-  y -= 45; // turun lebih jauh biar “Agreement Statement” rapi
+// ---------- SECTION 4: Uniform Policy Acknowledgment Worksheet ----------
+drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+drawText("Uniform Policy Acknowledgment Worksheet", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+y -= 45;
 
-  drawText("Agreement Statement", margin, y, 10.5, true);
-  y -= 22;
+drawText("Agreement Statement", margin, y, 10.5, true);
+y -= 22;
 
-  drawText("By signing this worksheet, you agree to the following terms:", margin, y);
-  y -= 20;
+drawText("By signing this worksheet, you agree to the following terms:", margin, y);
+y -= 20;
 
-  drawText("You acknowledge receipt of the uniform and agree to the stated price of:", margin, y);
-  y -= 15;
+// ✅ Dua kolom layout
+const col1X = margin;
+const col2X = margin + 270;
+const rowHeight = 16;
 
-  drawRect(margin + 300, y - 3, 80, 15, rgb(1, 1, 1));
-  drawText(`$ ${pricePerUnit}`, margin + 310, y);
-  drawText(", which is non-refundable.", margin + 400, y);
-  y -= 20;
+// Baris 1–2: acknowledgment
+drawText("You acknowledge receipt of the uniform and", col1X, y);
+y -= rowHeight;
+drawText("agree to the stated price of:", col1X, y);
 
-  drawText("and payable by making payment to:", margin, y);
-  drawText(payload.payableTo, margin + 180, y, 10, true);
-  y -= 15;
+// Harga kanan + kotak
+drawRect(col2X, y - 3, 70, 15, rgb(1, 1, 1));
+drawText(`$ ${pricePerUnit}`, col2X + 10, y);
+drawText(", which is non-refundable.", col2X + 80, y);
+y -= rowHeight + 5;
 
-  drawText(`thru: ${paymentThru.join(" / ") || "-"}`, margin, y);
-  y -= 25;
+// ✅ Baris payable to
+drawText("and payable by making payment to:", col1X, y);
 
-  drawText("You understand and accept the Policy as described in Policy Document:", margin, y);
-  y -= 18;
+// kotak + isi nama di kanan
+drawRect(col2X, y - 3, 180, 15, rgb(1, 1, 1));
+drawText(payload.payableTo, col2X + 10, y, 10, true);
+y -= rowHeight;
 
-  drawRect(margin, y - 3, 80, 15, rgb(1, 1, 1));
-  drawText(payload.policyAcknowledgment.policyCode, margin + 5, y);
-  drawRect(margin + 85, y - 3, 250, 15, rgb(1, 1, 1));
-  drawText(payload.policyAcknowledgment.policyName, margin + 90, y);
-  y -= 25;
+// ✅ Baris thru
+drawText("thru:", col1X, y);
 
-  drawText("You agree to comply with the policy’s requirements at all times while serving.", margin, y);
-  y -= 18;
+// kotak + isi metode bayar
+drawRect(col2X, y - 3, 180, 15, rgb(1, 1, 1));
+drawText(paymentThru.join(" / ") || "-", col2X + 10, y);
+y -= rowHeight + 5;
 
-  const longText =
-    "Any noncompliance will be handled according to the disciplinary rules written in the referenced policy. All information provided in all reference scope of the document is true and accurate to the best of your knowledge.";
-  const wrappedLines = wrapText(longText, width - margin * 2);
-  wrappedLines.forEach((line) => {
-    drawText(line, margin, y);
-    y -= 14;
-  });
+// Policy doc
+drawText("You understand and accept the Policy as described in Policy Document:", col1X, y);
+y -= rowHeight;
+
+drawRect(col1X, y - 3, 80, 15, rgb(1, 1, 1));
+drawText(payload.policyAcknowledgment.policyCode, col1X + 5, y);
+drawRect(col1X + 85, y - 3, 250, 15, rgb(1, 1, 1));
+drawText(payload.policyAcknowledgment.policyName, col1X + 90, y);
+y -= rowHeight + 5;
+
+drawText("You agree to comply with the policy’s requirements at all times while serving.", col1X, y);
+y -= rowHeight;
+
+// Paragraf wrap terakhir
+const longText =
+  "Any noncompliance will be handled according to the disciplinary rules written in the referenced policy. All information provided in all reference scope of the document is true and accurate to the best of your knowledge.";
+const wrappedLines = wrapText(longText, width - margin * 2);
+wrappedLines.forEach((line) => {
+  drawText(line, col1X, y);
+  y -= 14;
+});
+
 
   // ---------- FOOTER ----------
   const footerText = `Generated on ${new Date().toLocaleDateString()} by ${payload.preparer}`;
