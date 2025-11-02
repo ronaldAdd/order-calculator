@@ -661,9 +661,23 @@ export default function UploadExcelPage() {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-    const drawText = (text, x, y, size = 10, boldFont = false, color = rgb(0, 0, 0)) => {
-      page.drawText(String(text || ""), { x, y, size, font: boldFont ? bold : font, color });
-    };
+    const drawText = (
+  text: string,
+  x: number,
+  y: number,
+  size: number = 10,
+  boldFont: boolean = false,
+  color = rgb(0, 0, 0)
+) => {
+  page.drawText(String(text || ""), {
+    x,
+    y,
+    size,
+    font: boldFont ? bold : font,
+    color,
+  });
+};
+
 
     const drawRect = (x, y, w, h, fillColor, stroke = true) => {
       page.drawRectangle({ x, y, width: w, height: h, color: fillColor, borderColor: rgb(0, 0, 0), borderWidth: stroke ? 0.5 : 0 });
@@ -2220,12 +2234,12 @@ export default function UploadExcelPage() {
             <div className="col-span-12 md:col-span-2 flex flex-col space-y-2">
 
 
-              <button
+              {/* <button
               onClick={handleSaveToConsole}
                 className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
               >
                 Save
-              </button>
+              </button> */}
 
               <button
                 onClick={handleExportToPDF}
