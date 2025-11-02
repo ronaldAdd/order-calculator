@@ -14,6 +14,8 @@ import type { SingleValue } from 'react-select'
 import reactSelectStyles from '@/lib/reactSelectStyles'
 import { validateMappedDebtorZod } from '@/utils/validateMappedDebtorZod'
 import useUserStore from '../../src/store/useUserStore'
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib'
+
 
 
 interface MappingField {
@@ -411,6 +413,823 @@ export default function UploadExcelPage() {
       toast.success(`✅ Semua ${successCount} baris berhasil disimpan ke database`)
     }
   }
+
+  const handleSaveToConsole = () => {
+    if (!data || data.length === 0) {
+      toast.error("⚠️ Tidak ada data tabel yang bisa disimpan.");
+      return;
+    }
+
+    // Ambil header kolom (baris pertama)
+    const headers = data[0];
+
+    // Buat array data dari tabel
+    const tableRows = data.slice(1).map((row, rowIdx) => {
+      const rowObj: Record<string, string> = {};
+
+      row.forEach((cell, cellIdx) => {
+        const mappedField = headerMapping[cellIdx] || headers[cellIdx] || `col_${cellIdx + 1}`;
+        rowObj[mappedField] = cell;
+      });
+
+      // Kalau kolom "size" belum dimapping, tambahkan dari assignedSizes
+      if (!Object.values(headerMapping).includes("size")) {
+        rowObj["size"] = assignedSizes[rowIdx] || "";
+      }
+
+      return rowObj;
+    });
+
+    const payload = {
+      preparer: user?.name || "Unknown Preparer",
+      uid: user?.uid || "Unknown Preparer",
+      payableTo: user?.name || "Unknown Payee",
+
+      productInfo: {
+        productCode,
+        productName,
+        departmentName,
+        projectName,
+        systemDate,
+      },
+      paymentInfo: {
+        paymentThru,
+        methods,
+      },
+      priceCalculation: {
+        qty,
+        unitPrice,
+        shipping,
+        pricePerUnit,
+      },
+      policyAcknowledgment: {
+        policyCode,
+        policyName,
+        policyPrice: pricePerUnit,
+        isPolicyAgreed,
+        systemDate,
+      },
+      sizeSummary,
+      tableData: tableRows,
+    };
+
+    console.log("💾 Data to be saved:", payload);
+    toast.success("✅ Semua data berhasil disimpan ke console log!");
+  };
+
+
+  const handleExportToPDF_ORI = async () => {
+    if (!data || data.length === 0) {
+      toast.error("⚠️ Tidak ada data tabel untuk diexport.");
+      return;
+    }
+
+    const headers = data[0];
+    const tableRows = data.slice(1).map((row, rowIdx) => {
+      const rowObj: Record<string, string> = {};
+      row.forEach((cell, cellIdx) => {
+        const mappedField = headerMapping[cellIdx] || headers[cellIdx] || `col_${cellIdx + 1}`;
+        rowObj[mappedField] = cell;
+      });
+      if (!Object.values(headerMapping).includes("size")) {
+        rowObj["size"] = assignedSizes[rowIdx] || "";
+      }
+      return rowObj;
+    });
+
+    const payload = {
+      preparer: user?.name || "Unknown Preparer",
+      payableTo: user?.name || "Unknown Payee",
+      productInfo: { productCode, productName, departmentName, projectName, systemDate },
+      paymentInfo: { paymentThru, methods },
+      priceCalculation: { qty, unitPrice, shipping, pricePerUnit },
+      policyAcknowledgment: {
+        policyCode,
+        policyName,
+        policyPrice: pricePerUnit,
+        isPolicyAgreed,
+        systemDate,
+      },
+      sizeSummary,
+      tableData: tableRows,
+    };
+
+    // 🧾 Create PDF
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage();
+    const { width, height } = page.getSize();
+
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    let y = height - 60;
+    const marginX = 50;
+
+    const drawTitle = (text: string) => {
+      page.drawText(text, {
+        x: marginX,
+        y,
+        size: 18,
+        font: bold,
+        color: rgb(0.1, 0.1, 0.5),
+      });
+      y -= 25;
+    };
+
+    const drawSection = (title: string) => {
+      page.drawText(title, {
+        x: marginX,
+        y,
+        size: 13,
+        font: bold,
+        color: rgb(0, 0, 0),
+      });
+      y -= 15;
+    };
+
+    const drawText = (text: string) => {
+      page.drawText(text, {
+        x: marginX + 15,
+        y,
+        size: 11,
+        font,
+        color: rgb(0, 0, 0),
+      });
+      y -= 14;
+    };
+
+    // ---------- CONTENT ----------
+    drawTitle("Uniform Policy Summary");
+
+    drawSection("General Info");
+    drawText(`Preparer: ${payload.preparer}`);
+    drawText(`Payable To: ${payload.payableTo}`);
+    y -= 6;
+
+    drawSection("Product Information");
+    Object.entries(payload.productInfo).forEach(([k, v]) => drawText(`${k}: ${v}`));
+    y -= 6;
+
+    drawSection("Payment Thru");
+    drawText(payload.paymentInfo.paymentThru.join(", ") || "-");
+    y -= 6;
+
+    drawSection("Price Calculation");
+    drawText(`Quantity: ${qty}`);
+    drawText(`Unit Price: $${unitPrice.toFixed(2)}`);
+    drawText(`Shipping: $${shipping.toFixed(2)}`);
+    drawText(`Price/Unit: $${pricePerUnit}`);
+    y -= 6;
+
+    drawSection("Policy Acknowledgment");
+    Object.entries(payload.policyAcknowledgment).forEach(([k, v]) =>
+      drawText(`${k}: ${v}`)
+    );
+    y -= 6;
+
+    drawSection("Size Summary");
+    Object.entries(payload.sizeSummary).forEach(([size, count]) =>
+      drawText(`${size}: ${count} pcs`)
+    );
+    y -= 10;
+
+    drawSection("Table Data");
+
+    // ---------- Table ----------
+    const startY = y;
+    const colWidths = [150, 150, 100]; // adjust depending on how many cols
+    const tableHeader = Object.keys(payload.tableData[0] || {});
+    const rowHeight = 14;
+
+    // Header background
+    page.drawRectangle({
+      x: marginX,
+      y: startY - 4,
+      width: width - 2 * marginX,
+      height: rowHeight + 4,
+      color: rgb(0.9, 0.9, 0.9),
+    });
+
+    // Draw table header
+    let x = marginX;
+    tableHeader.forEach((h, i) => {
+      page.drawText(h, { x: x + 4, y: startY, size: 10.5, font: bold });
+      x += colWidths[i] ?? 120;
+    });
+    y = startY - rowHeight - 8;
+
+    // Rows
+    payload.tableData.forEach((row, rowIdx) => {
+      x = marginX;
+      const rowValues = Object.values(row);
+      rowValues.forEach((val, i) => {
+        page.drawText(String(val).slice(0, 25), {
+          x: x + 4,
+          y,
+          size: 10,
+          font,
+          color: rgb(0, 0, 0),
+        });
+        x += colWidths[i] ?? 120;
+      });
+      y -= rowHeight;
+
+      // New page if out of space
+      if (y < 60 && rowIdx < payload.tableData.length - 1) {
+        const newPage = pdfDoc.addPage();
+        y = height - 60;
+        page.drawText("(continued...)", { x: marginX, y, size: 9, font });
+      }
+    });
+
+    // ---------- SAVE ----------
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Uniform-Form-${new Date().toISOString().slice(0, 10)}.pdf`;
+    link.click();
+
+    toast.success("✅ PDF berhasil dibuat dengan format rapi!");
+  };
+
+
+  const handleExportToPDF_ORI2 = async () => {
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595, 842]); // A4
+    const { width, height } = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    const drawText = (text, x, y, size = 10, boldFont = false, color = rgb(0, 0, 0)) => {
+      page.drawText(String(text || ""), { x, y, size, font: boldFont ? bold : font, color });
+    };
+
+    const drawRect = (x, y, w, h, fillColor, stroke = true) => {
+      page.drawRectangle({ x, y, width: w, height: h, color: fillColor, borderColor: rgb(0, 0, 0), borderWidth: stroke ? 0.5 : 0 });
+    };
+
+    let y = height - 60;
+    const margin = 40;
+
+    // HEADER: Aggregated Information
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Aggregated Information", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 35;
+
+    // Preparer + Payment Thru
+    drawText("Preparer", margin, y);
+    drawRect(margin + 80, y - 3, 180, 15, rgb(1, 1, 1), false);
+    drawText(user?.name || "—", margin + 85, y);
+    y -= 20;
+
+    drawText("Payment Thru", margin, y);
+    drawRect(margin + 80, y - 3, 180, 15, rgb(1, 1, 1), false);
+    drawText(paymentThru.join(" / ") || "-", margin + 85, y);
+    y -= 30;
+
+    // Distribution Table
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Distribution", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 25;
+
+    const sizes = ["S", "M", "L", "XL", "2XL"];
+    const sizeValues = sizes.map((s) => sizeSummary[s] || 0);
+    const colW = 60;
+
+    // Header row
+    sizes.forEach((s, i) => {
+      drawRect(margin + i * colW, y - 18, colW, 18, rgb(0.9, 0.9, 0.9));
+      drawText(s, margin + i * colW + 22, y - 13, 10, true);
+    });
+    y -= 18;
+
+    // Value row
+    sizeValues.forEach((v, i) => {
+      drawRect(margin + i * colW, y - 18, colW, 18, rgb(1, 1, 1));
+      drawText(v, margin + i * colW + 25, y - 13);
+    });
+    y -= 30;
+
+    // Price Calculation Section
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Price Calculation", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 25;
+
+    const labels = ["QTY(Pieces)", "(USD/PC)", "Amount(USD)", "Shipping(USD)", "Total(USD)", "Price(USD)"];
+    const values = [
+      qty,
+      `$${unitPrice.toFixed(2)}`,
+      `$${(qty * unitPrice).toFixed(2)}`,
+      `$${shipping.toFixed(2)}`,
+      `$${(qty * unitPrice + shipping).toFixed(2)}`,
+      `$${pricePerUnit}`,
+    ];
+
+    // Header
+    labels.forEach((t, i) => {
+      drawRect(margin + i * 90, y - 18, 90, 18, rgb(0.9, 0.9, 0.9));
+      drawText(t, margin + i * 90 + 5, y - 13, 9, true);
+    });
+    y -= 18;
+
+    // Values
+    values.forEach((v, i) => {
+      drawRect(margin + i * 90, y - 18, 90, 18, rgb(1, 1, 1));
+      drawText(v, margin + i * 90 + 5, y - 13, 9);
+    });
+    y -= 30;
+
+    // POLICY SECTION
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Uniform Policy Acknowledgment Worksheet", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 35;
+
+    drawText("Agreement Statement", margin, y, 10, true);
+    y -= 15;
+    drawText("By signing this worksheet, you agree to the following terms:", margin, y);
+    y -= 20;
+
+    drawText(
+      "You acknowledge receipt of the uniform and agree to the stated price of:",
+      margin,
+      y
+    );
+    y -= 15;
+
+    // Price box
+    drawRect(margin + 300, y - 3, 80, 15, rgb(1, 1, 1));
+    drawText(`$ ${pricePerUnit}`, margin + 310, y);
+    drawText(", which is non-refundable.", margin + 400, y);
+    y -= 20;
+
+    drawText("and payable by making payment to", margin, y);
+    drawText(user?.name || "-", margin + 200, y);
+    y -= 15;
+    drawText(`thru ${paymentThru.join(" / ") || "-"}`, margin + 50, y);
+    y -= 20;
+
+    drawText("You understand and accept the Policy as described in Policy Document:", margin, y);
+    y -= 15;
+
+    // Policy code + name
+    drawRect(margin, y - 3, 80, 15, rgb(1, 1, 1));
+    drawText(policyCode || "-", margin + 5, y);
+    drawRect(margin + 85, y - 3, 250, 15, rgb(1, 1, 1));
+    drawText(policyName || "-", margin + 90, y);
+    y -= 25;
+
+    drawText(
+      "You agree to comply with the policy’s requirements at all times while serving.",
+      margin,
+      y
+    );
+    y -= 20;
+    drawText(
+      "Any noncompliance will be handled according to the disciplinary rules written in the referenced policy.All information provided in all reference scope of the document is true and accurate to the best of your knowledge",
+      margin,
+      y
+    );
+
+    // Save
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Uniform-Form-${new Date().toISOString().slice(0, 10)}.pdf`;
+    a.click();
+
+    toast.success("✅ PDF exported with formatted layout!");
+  };
+
+  const handleExportToPDF_ORI3 = async () => {
+    if (!data || data.length === 0) {
+      toast.error("⚠️ Tidak ada data tabel untuk diexport.");
+      return;
+    }
+
+    const headers = data[0];
+    const tableRows = data.slice(1).map((row, rowIdx) => {
+      const rowObj: Record<string, string> = {};
+      row.forEach((cell, cellIdx) => {
+        const mappedField = headerMapping[cellIdx] || headers[cellIdx] || `col_${cellIdx + 1}`;
+        rowObj[mappedField] = cell;
+      });
+      if (!Object.values(headerMapping).includes("size")) {
+        rowObj["size"] = assignedSizes[rowIdx] || "";
+      }
+      return rowObj;
+    });
+
+    const payload = {
+      preparer: user?.name || "Unknown Preparer",
+      payableTo: user?.name || "Unknown Payee",
+      productInfo: { productCode, productName, departmentName, projectName, systemDate },
+      paymentInfo: { paymentThru, methods },
+      priceCalculation: { qty, unitPrice, shipping, pricePerUnit },
+      policyAcknowledgment: {
+        policyCode,
+        policyName,
+        policyPrice: pricePerUnit,
+        isPolicyAgreed,
+        systemDate,
+      },
+      sizeSummary,
+      tableData: tableRows,
+    };
+
+    // 🧾 Create PDF
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595, 842]); // A4 size
+    const { width, height } = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    const drawText = (text: string, x: number, y: number, size = 10, isBold = false, color = rgb(0, 0, 0)) => {
+      page.drawText(String(text || ""), { x, y, size, font: isBold ? bold : font, color });
+    };
+
+    const drawRect = (x: number, y: number, w: number, h: number, fillColor: any, stroke = true) => {
+      page.drawRectangle({
+        x,
+        y,
+        width: w,
+        height: h,
+        color: fillColor,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: stroke ? 0.5 : 0,
+      });
+    };
+
+    let y = height - 60;
+    const margin = 40;
+
+    // SECTION 1: Aggregated Information
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Aggregated Information", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 35;
+
+    drawText("Preparer", margin, y);
+    drawRect(margin + 80, y - 3, 180, 15, rgb(1, 1, 1), false);
+    drawText(payload.preparer, margin + 85, y);
+    y -= 20;
+
+    drawText("Payment Thru", margin, y);
+    drawRect(margin + 80, y - 3, 180, 15, rgb(1, 1, 1), false);
+    drawText(paymentThru.join(" / ") || "-", margin + 85, y);
+    y -= 30;
+
+    // SECTION 2: Distribution
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Distribution", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 25;
+
+    const sizes = ["S", "M", "L", "XL", "2XL", "TOTAL"];
+    const sizeValues = sizes.map((s) => sizeSummary[s] || 0);
+    const colW = 60;
+
+    sizes.forEach((s, i) => {
+      drawRect(margin + i * colW, y - 18, colW, 18, rgb(0.9, 0.9, 0.9));
+      drawText(s, margin + i * colW + 22, y - 13, 10, true);
+    });
+    y -= 18;
+    sizeValues.forEach((v, i) => {
+      drawRect(margin + i * colW, y - 18, colW, 18, rgb(1, 1, 1));
+      drawText(v, margin + i * colW + 25, y - 13);
+    });
+    y -= 30;
+
+    // SECTION 3: Price Calculation
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Price Calculation", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 25;
+
+    const labels = ["QTY(Pieces)", "(USD/PC)", "Amount(USD)", "Shipping(USD)", "Total(USD)", "Price(USD)"];
+    const values = [
+      qty,
+      `$${unitPrice.toFixed(2)}`,
+      `$${(qty * unitPrice).toFixed(2)}`,
+      `$${shipping.toFixed(2)}`,
+      `$${(qty * unitPrice + shipping).toFixed(2)}`,
+      `$${pricePerUnit}`,
+    ];
+
+    labels.forEach((t, i) => {
+      drawRect(margin + i * 90, y - 18, 90, 18, rgb(0.9, 0.9, 0.9));
+      drawText(t, margin + i * 90 + 5, y - 13, 9, true);
+    });
+    y -= 18;
+    values.forEach((v, i) => {
+      drawRect(margin + i * 90, y - 18, 90, 18, rgb(1, 1, 1));
+      drawText(v, margin + i * 90 + 5, y - 13, 9);
+    });
+    y -= 35;
+
+    // SECTION 4: Uniform Policy Acknowledgment Worksheet
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Uniform Policy Acknowledgment Worksheet", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+
+    y -= 40;
+    drawText("Agreement Statement", margin, y, 10.5, true);
+    y -= 18;
+
+    drawText(
+      "By signing this worksheet, you agree to the following terms:",
+      margin,
+      y
+    );
+    y -= 20;
+
+    drawText(
+      "You acknowledge receipt of the uniform and agree to the stated price of:",
+      margin,
+      y
+    );
+    y -= 15;
+
+    drawText(", which is non-refundable.", margin, y);
+    drawRect(margin + 120, y - 3, 80, 15, rgb(1, 1, 1));
+    drawText(`$ ${pricePerUnit}`, margin + 130, y, 10, true);
+    y -= 25;
+
+    drawText("and payable by making payment to:", margin, y);
+    drawText(payload.payableTo, margin + 160, y, 10, true);
+    y -= 15;
+
+    drawText("thru:", margin, y);
+    drawText(paymentThru.join(" / ") || "-", margin + 60, y, 10, true);
+    y -= 25;
+
+    drawText(
+      "You understand and accept the Policy as described in Policy Document:",
+      margin,
+      y
+    );
+    y -= 18;
+
+    drawRect(margin, y - 3, 80, 15, rgb(1, 1, 1));
+    drawText(payload.policyAcknowledgment.policyCode, margin + 5, y, 10, true);
+    drawRect(margin + 85, y - 3, 250, 15, rgb(1, 1, 1));
+    drawText(payload.policyAcknowledgment.policyName, margin + 90, y, 10);
+    y -= 28;
+
+    drawText(
+      "You agree to comply with the policy’s requirements at all times while serving.",
+      margin,
+      y
+    );
+
+      y -= 20;
+      drawText(
+        "Any noncompliance will be handled according to the disciplinary rules written in the referenced policy.All information provided in all reference scope of the document is true and accurate to the best of your knowledge",
+        margin,
+        y
+      );
+    // FOOTER
+    const footerText = `Generated on ${new Date().toLocaleDateString()} by ${payload.preparer}`;
+    page.drawText(footerText, {
+      x: width - margin - 200,
+      y: 30,
+      size: 8,
+      font,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+
+    // SAVE FILE
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Uniform-Form-${new Date().toISOString().slice(0, 10)}.pdf`;
+    a.click();
+
+    toast.success("✅ PDF exported successfully!");
+  };
+
+  const handleExportToPDF = async () => {
+
+  // ✅ Cek checkbox Policy Agreement
+  if (!isPolicyAgreed) {
+    toast.error("⚠️ You must agree to the Policy before exporting to PDF!");
+    return;
+  }
+
+    if (!data || data.length === 0) {
+      toast.error("⚠️ No table data available to export.");
+      return;
+    }
+
+    // Ambil data tabel
+    const headers = data[0];
+    const tableRows = data.slice(1).map((row, rowIdx) => {
+      const rowObj: Record<string, string> = {};
+      row.forEach((cell, cellIdx) => {
+        const mappedField = headerMapping[cellIdx] || headers[cellIdx] || `col_${cellIdx + 1}`;
+        rowObj[mappedField] = cell;
+      });
+      if (!Object.values(headerMapping).includes("size")) {
+        rowObj["size"] = assignedSizes[rowIdx] || "";
+      }
+      return rowObj;
+    });
+
+    // Kumpulkan semua data form
+    const payload = {
+      preparer: user?.name || "Unknown Preparer",
+      payableTo: user?.name || "Unknown Payee",
+      productInfo: { productCode, productName, departmentName, projectName, systemDate },
+      paymentInfo: { paymentThru, methods },
+      priceCalculation: { qty, unitPrice, shipping, pricePerUnit },
+      policyAcknowledgment: {
+        policyCode,
+        policyName,
+        policyPrice: pricePerUnit,
+        isPolicyAgreed,
+        systemDate,
+      },
+      sizeSummary,
+      tableData: tableRows,
+    };
+
+    // 🧾 Buat PDF baru
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595, 842]); // A4 size
+    const { width, height } = page.getSize();
+
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    const drawText = (text: string, x: number, y: number, size = 10, boldFont = false, color = rgb(0, 0, 0)) => {
+      page.drawText(String(text || ""), { x, y, size, font: boldFont ? bold : font, color });
+    };
+
+    const drawRect = (x: number, y: number, w: number, h: number, fillColor: any, stroke = true) => {
+      page.drawRectangle({
+        x,
+        y,
+        width: w,
+        height: h,
+        color: fillColor,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: stroke ? 0.5 : 0,
+      });
+    };
+
+    // Helper buat text wrapping panjang
+    const wrapText = (text: string, maxWidth: number, fontSize = 10) => {
+      const words = text.split(" ");
+      let line = "";
+      const lines: string[] = [];
+      for (const word of words) {
+        const testLine = line + word + " ";
+        const width = font.widthOfTextAtSize(testLine, fontSize);
+        if (width > maxWidth) {
+          lines.push(line.trim());
+          line = word + " ";
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line.trim());
+      return lines;
+    };
+
+    let y = height - 60;
+    const margin = 40;
+
+    // ---------- SECTION 1: Aggregated Information ----------
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Aggregated Information", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 35;
+
+    drawText("Preparer", margin, y);
+    drawRect(margin + 80, y - 3, 180, 15, rgb(1, 1, 1), false);
+    drawText(payload.preparer, margin + 85, y);
+    y -= 20;
+
+    drawText("Payment Thru", margin, y);
+    drawRect(margin + 80, y - 3, 180, 15, rgb(1, 1, 1), false);
+    drawText(paymentThru.join(" / ") || "-", margin + 85, y);
+    y -= 30;
+
+    // ---------- SECTION 2: Distribution ----------
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Distribution", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 25;
+
+    // Hitung total otomatis
+    const sizes = ["S", "M", "L", "XL", "2XL"];
+    const totalSize = sizes.reduce((sum, s) => sum + (sizeSummary[s] || 0), 0);
+    const allSizes = [...sizes, "TOTAL"];
+    const sizeValues = [...sizes.map((s) => sizeSummary[s] || 0), totalSize];
+    const colW = 60;
+
+    // Header
+    allSizes.forEach((s, i) => {
+      drawRect(margin + i * colW, y - 18, colW, 18, rgb(0.9, 0.9, 0.9));
+      drawText(s, margin + i * colW + 22, y - 13, 10, true);
+    });
+    y -= 18;
+
+    // Values
+    sizeValues.forEach((v, i) => {
+      drawRect(margin + i * colW, y - 18, colW, 18, rgb(1, 1, 1));
+      drawText(v, margin + i * colW + 25, y - 13);
+    });
+    y -= 30;
+
+    // ---------- SECTION 3: Price Calculation ----------
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Price Calculation", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 25;
+
+    const labels = ["QTY(Pieces)", "(USD/PC)", "Amount(USD)", "Shipping(USD)", "Total(USD)", "Price(USD)"];
+    const values = [
+      qty,
+      `$${unitPrice.toFixed(2)}`,
+      `$${(qty * unitPrice).toFixed(2)}`,
+      `$${shipping.toFixed(2)}`,
+      `$${(qty * unitPrice + shipping).toFixed(2)}`,
+      `$${pricePerUnit}`,
+    ];
+
+    labels.forEach((t, i) => {
+      drawRect(margin + i * 90, y - 18, 90, 18, rgb(0.9, 0.9, 0.9));
+      drawText(t, margin + i * 90 + 5, y - 13, 9, true);
+    });
+    y -= 18;
+
+    values.forEach((v, i) => {
+      drawRect(margin + i * 90, y - 18, 90, 18, rgb(1, 1, 1));
+      drawText(v, margin + i * 90 + 5, y - 13, 9);
+    });
+    y -= 35;
+
+    // ---------- SECTION 4: Uniform Policy Acknowledgment Worksheet ----------
+    drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
+    drawText("Uniform Policy Acknowledgment Worksheet", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
+    y -= 40;
+
+    drawText("Agreement Statement", margin, y, 10.5, true);
+    y -= 18;
+
+    drawText("By signing this worksheet, you agree to the following terms:", margin, y);
+    y -= 20;
+
+    drawText("You acknowledge receipt of the uniform and agree to the stated price of:", margin, y);
+    y -= 15;
+
+    drawRect(margin + 300, y - 3, 80, 15, rgb(1, 1, 1));
+    drawText(`$ ${pricePerUnit}`, margin + 310, y);
+    drawText(", which is non-refundable.", margin + 400, y);
+    y -= 20;
+
+    drawText("and payable by making payment to:", margin, y);
+    drawText(payload.payableTo, margin + 180, y, 10, true);
+    y -= 15;
+
+    drawText(`thru: ${paymentThru.join(" / ") || "-"}`, margin, y);
+    y -= 25;
+
+    drawText("You understand and accept the Policy as described in Policy Document:", margin, y);
+    y -= 18;
+
+    drawRect(margin, y - 3, 80, 15, rgb(1, 1, 1));
+    drawText(payload.policyAcknowledgment.policyCode, margin + 5, y);
+    drawRect(margin + 85, y - 3, 250, 15, rgb(1, 1, 1));
+    drawText(payload.policyAcknowledgment.policyName, margin + 90, y);
+    y -= 25;
+
+    drawText("You agree to comply with the policy’s requirements at all times while serving.", margin, y);
+    y -= 18;
+
+    // 🔹 Long wrapped paragraph
+    const longText =
+      "Any noncompliance will be handled according to the disciplinary rules written in the referenced policy. All information provided in all reference scope of the document is true and accurate to the best of your knowledge.";
+    const wrappedLines = wrapText(longText, width - margin * 2);
+    wrappedLines.forEach((line) => {
+      drawText(line, margin, y);
+      y -= 14;
+    });
+
+    // ---------- FOOTER ----------
+    const footerText = `Generated on ${new Date().toLocaleDateString()} by ${payload.preparer}`;
+    drawText(footerText, width - margin - 200, 30, 8);
+
+    // ---------- SAVE ----------
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Uniform-Form-${new Date().toISOString().slice(0, 10)}.pdf`;
+    a.click();
+
+    toast.success("✅ PDF exported successfully!");
+  };
+
 
 
   const paginatedData = data
@@ -1396,52 +2215,24 @@ export default function UploadExcelPage() {
 
           <div className="mt-6 grid grid-cols-12 gap-4 items-start">
             {/* KIRI: Console Output (selalu muncul) */}
-            <div className="col-span-12 md:col-span-10 bg-black text-white font-mono text-sm p-4 rounded max-h-80 overflow-y-auto border border-gray-700">
-              {Object.keys(rowErrors).length > 0 && (
-                <div className="mb-3">
-                  <button
-                    onClick={handleDownloadErrorReport}
-                    className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                  >
-                    Download Error Report
-                  </button>
-                </div>
-              )}
-
-              <div className="text-yellow-400 font-bold mb-2">📋 Validation Log:</div>
-              {/* 🛑 Munculin error template jika header tidak cocok */}
-              {rowErrors['template'] && (
-                <div className="text-red-300 mb-4 whitespace-pre-wrap">
-                  {rowErrors['template'].templateMismatch}
-                </div>
-              )}
-
-              {Object.keys(rowErrors).length === 0 ? (
-                <div className="text-green-400">✅ Tidak ada error validasi. Semua baris valid.</div>
-              ) : (
-                Object.entries(rowErrors).map(([rowIdx, fieldErrors]) => (
-                  <div key={rowIdx} className="text-red-400 mb-2">
-                    ❌ Row {+rowIdx + 2}:
-                    {Object.entries(fieldErrors).map(([field, message]) => (
-                      <div key={field} className="pl-4">
-                        <code>{field}</code>:  {String(message)}
-                      </div>
-                    ))}
-                  </div>
-                ))
-              )}
-            </div>
 
             {/* KANAN: Tombol-tombol aksi */}
             <div className="col-span-12 md:col-span-2 flex flex-col space-y-2">
 
 
-              {/* <button
-                onClick={handleValidateRows}
+              <button
+              onClick={handleSaveToConsole}
                 className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
               >
-                Row Level Validation
-              </button> */}
+                Save
+              </button>
+
+              <button
+                onClick={handleExportToPDF}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Export to PDF
+              </button>
 
               {/* <button
                 onClick={handleSaveMappingAndInsert}
