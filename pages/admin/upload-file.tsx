@@ -130,6 +130,12 @@ export default function UploadExcelPage() {
   const [projectName, setProjectName] = useState('');
   const [systemDate] = useState(() => new Date().toLocaleDateString());
 
+  const [policyPrice, setPolicyPrice] = useState('');
+  const [policyCode, setPolicyCode] = useState('');
+  const [policyName, setPolicyName] = useState('');
+  const [isPolicyAgreed, setIsPolicyAgreed] = useState(false);  
+  // Hitung price per unit (USD)
+  const pricePerUnit = qty > 0 ? ((qty * unitPrice + shipping) / qty).toFixed(2) : '0.00';  
 
   useEffect(() => {
     const fetchCollectors = async () => {
@@ -1043,6 +1049,114 @@ export default function UploadExcelPage() {
 
       </div>
 
+
+      {/* ✅ POLICY ACKNOWLEDGMENT FORM */}
+      <div className="bg-white dark:bg-gray-800 p-6 rounded shadow mt-8 max-w-3xl mx-auto">
+        <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
+          📋 Uniform Policy Acknowledgment Worksheet
+        </h2>
+
+        {/* Agreement Text */}
+        <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+          By signing this worksheet, you agree to the following terms:
+        </p>
+
+{/* Price (USD) - ambil dari hasil price per unit (Price Calculation table) */}
+<div className="mb-4">
+  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+    Price (USD)
+  </label>
+  <input
+    type="text"
+    value={`$${pricePerUnit}`}
+    readOnly
+    className="w-full rounded border border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+  />
+</div>
+
+
+        {/* Payable To - otomatis dari user / form sebelumnya */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Payable To
+          </label>
+          <input
+            type="text"
+            value={user?.name || ''}
+            readOnly
+            className="w-full rounded border border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+          />
+        </div>
+
+        {/* Payment Thru - otomatis tampil dari form Payment */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Payment Thru
+          </label>
+          <input
+            type="text"
+            value={paymentThru.join(', ') || 'No payment method selected'}
+            readOnly
+            className="w-full rounded border border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+          />
+        </div>
+
+        {/* Policy Document Info */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Policy Document Code
+            </label>
+            <input
+              type="text"
+              value={policyCode}
+              onChange={(e) => setPolicyCode(e.target.value)}
+              placeholder="e.g., MTOPS001"
+              className="w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Policy Document Name
+            </label>
+            <input
+              type="text"
+              value={policyName}
+              onChange={(e) => setPolicyName(e.target.value)}
+              placeholder="e.g., Media Team Uniform Policy"
+              className="w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+            />
+          </div>
+        </div>
+
+        {/* Agreement Checkbox */}
+        <div className="flex items-start space-x-2 mt-2">
+          <input
+            type="checkbox"
+            checked={isPolicyAgreed}
+            onChange={(e) => setIsPolicyAgreed(e.target.checked)}
+            className="mt-1 w-4 h-4 accent-green-600"
+          />
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            I understand and accept the Policy as described above and agree to comply
+            with its requirements at all times while serving.
+          </p>
+        </div>
+
+        {/* System Date */}
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            System Date
+          </label>
+          <input
+            type="text"
+            value={systemDate}
+            readOnly
+            className="w-full rounded border border-gray-400 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+          />
+        </div>
+      </div>
 
 
 
