@@ -1451,6 +1451,18 @@ const handleExportToPDF = async () => {
         </div>
 
         {/* Agreement Checkbox */}
+        <div className="flex items-start space-x-2 mt-2">
+          <input
+            type="checkbox"
+            checked={isPolicyAgreed}
+            onChange={(e) => setIsPolicyAgreed(e.target.checked)}
+            className="mt-1 w-4 h-4 accent-green-600"
+          />
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            I understand and accept the Policy as described above and agree to comply
+            with its requirements at all times while serving.
+          </p>
+        </div>
 
         {/* System Date */}
         <div className="mt-6">
