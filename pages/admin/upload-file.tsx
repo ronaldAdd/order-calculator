@@ -1314,7 +1314,7 @@ const handleExportToPDF = async () => {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  // 🖋 Helper: draw text (handles string | number)
+  // 🖋 Helper: draw text (accept string or number)
   const drawText = (
     text: string | number,
     x: number,
@@ -1371,7 +1371,7 @@ const handleExportToPDF = async () => {
     return lines;
   };
 
-  // Layout
+  // Layout setup
   let y = height - 60;
   const margin = 40;
 
@@ -1395,7 +1395,6 @@ const handleExportToPDF = async () => {
   drawText("Distribution", margin + 5, y - 13, 11, true, rgb(1, 1, 1));
   y -= 25;
 
-  // Calculate total
   const sizes = ["S", "M", "L", "XL", "2XL"];
   const totalSize = sizes.reduce((sum, s) => sum + (sizeSummary[s] || 0), 0);
   const allSizes = [...sizes, "TOTAL"];
@@ -1410,9 +1409,9 @@ const handleExportToPDF = async () => {
   y -= 18;
 
   // Values
-  sizeValues.forEach((v, i) => {
+  sizeValues.forEach((v: number, i: number) => {
     drawRect(margin + i * colW, y - 18, colW, 18, rgb(1, 1, 1));
-    drawText(v, margin + i * colW + 25, y - 13);
+    drawText(String(v), margin + i * colW + 25, y - 13);
   });
   y -= 30;
 
@@ -1437,9 +1436,9 @@ const handleExportToPDF = async () => {
   });
   y -= 18;
 
-  values.forEach((v, i) => {
+  values.forEach((v: string | number, i: number) => {
     drawRect(margin + i * 90, y - 18, 90, 18, rgb(1, 1, 1));
-    drawText(v, margin + i * 90 + 5, y - 13, 9);
+    drawText(String(v), margin + i * 90 + 5, y - 13, 9);
   });
   y -= 35;
 
@@ -1484,7 +1483,7 @@ const handleExportToPDF = async () => {
   const longText =
     "Any noncompliance will be handled according to the disciplinary rules written in the referenced policy. All information provided in all reference scope of the document is true and accurate to the best of your knowledge.";
   const wrappedLines = wrapText(longText, width - margin * 2);
-  wrappedLines.forEach((line) => {
+  wrappedLines.forEach((line: string) => {
     drawText(line, margin, y);
     y -= 14;
   });
@@ -1504,7 +1503,6 @@ const handleExportToPDF = async () => {
 
   toast.success("✅ PDF exported successfully!");
 };
-
 
 
   const paginatedData = data
