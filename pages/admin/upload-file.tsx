@@ -121,7 +121,7 @@ export default function UploadExcelPage() {
   const [unitPrice, setUnitPrice] = useState(15.33);
   const [shipping, setShipping] = useState(114.00);
   const [verificationMsg, setVerificationMsg] = useState<string>("");
-  const [differenceMsg, setDifferenceMsg] = useState<number>(0);
+  const [differenceMsg, setDifferenceMsg] = useState<string>("0");
   const [paymentThru, setPaymentThru] = useState<string[]>([]);
   const user = useUserStore((state) => state.user)
   const [methods, setMethods] = useState<string[]>(['Cash', 'Bank Transfer', 'Zelle', 'Card']);
