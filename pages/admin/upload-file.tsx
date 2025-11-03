@@ -121,6 +121,7 @@ export default function UploadExcelPage() {
   const [unitPrice, setUnitPrice] = useState(15.33);
   const [shipping, setShipping] = useState(114.00);
   const [verificationMsg, setVerificationMsg] = useState<string>("");
+  const [differenceMsg, setDifferenceMsg] = useState<number>(0);
   const [paymentThru, setPaymentThru] = useState<string[]>([]);
   const user = useUserStore((state) => state.user)
   const [methods, setMethods] = useState<string[]>(['Cash', 'Bank Transfer', 'Zelle', 'Card']);
@@ -136,6 +137,10 @@ export default function UploadExcelPage() {
   const [policyCode, setPolicyCode] = useState('');
   const [policyName, setPolicyName] = useState('');
   const [isPolicyAgreed, setIsPolicyAgreed] = useState(false);  
+  const [policyDocuments, setPolicyDocuments] = useState<{ code: string; name: string }[]>([
+    { code: '', name: '' },
+  ]);
+
   // Hitung price per unit (USD)
   const pricePerUnit = qty > 0 ? ((qty * unitPrice + shipping) / qty).toFixed(2) : '0.00';  
 
@@ -231,10 +236,13 @@ export default function UploadExcelPage() {
 
     if (distTotal === qty) {
       setVerificationMsg(`✅ OK — ${distTotal} pieces total`);
+      setDifferenceMsg(`${distTotal -qty}`);
     } else if (distTotal < qty) {
       setVerificationMsg(`⚠️ ${qty - distTotal} piece(s) missing`);
+      setDifferenceMsg(`${distTotal -qty}`);
     } else {
       setVerificationMsg(`⚠️ ${distTotal - qty} piece(s) extra`);
+      setDifferenceMsg(`${distTotal -qty}`);
     }
   }, [qty, sizeSummary]);
 
@@ -463,8 +471,7 @@ export default function UploadExcelPage() {
         pricePerUnit,
       },
       policyAcknowledgment: {
-        policyCode,
-        policyName,
+        policyDocuments,
         policyPrice: pricePerUnit,
         isPolicyAgreed,
         systemDate,
@@ -513,8 +520,7 @@ const handleExportToPDF = async () => {
     paymentInfo: { paymentThru, methods },
     priceCalculation: { qty, unitPrice, shipping, pricePerUnit },
     policyAcknowledgment: {
-      policyCode,
-      policyName,
+      policyDocuments,
       policyPrice: pricePerUnit,
       isPolicyAgreed,
       systemDate,
@@ -644,7 +650,7 @@ const handleExportToPDF = async () => {
     `$${(qty * unitPrice).toFixed(2)}`,
     `$${shipping.toFixed(2)}`,
     `$${(qty * unitPrice + shipping).toFixed(2)}`,
-    `$${pricePerUnit}`,
+    Number(differenceMsg) === 0 ? `$${pricePerUnit}` : "Recap",
   ];
 
   labels.forEach((t, i) => {
@@ -658,6 +664,14 @@ const handleExportToPDF = async () => {
     drawText(String(v), margin + i * 90 + 5, y - 13, 9);
   });
   y -= 40;
+
+
+// Verification (ambil dari verificationMsg, tanpa emoji)
+drawText("Different", margin, y);
+drawRect(margin + 80, y - 3, 250, 15, rgb(1, 1, 1));
+drawText(differenceMsg  || "-", margin + 85, y);
+y -= 30;
+  
 
 // ---------- SECTION 4: Uniform Policy Acknowledgment Worksheet ----------
 drawRect(margin, y - 18, width - margin * 2, 18, rgb(0, 0, 0));
@@ -682,7 +696,11 @@ drawText("agree to the stated price of:", col1X, y);
 
 // Harga kanan + kotak
 drawRect(col2X, y - 3, 70, 15, rgb(1, 1, 1));
-drawText(`$ ${pricePerUnit}`, col2X + 10, y);
+drawText(
+  Number(differenceMsg) === 0 ? `$ ${pricePerUnit}` : "Recap",
+  col2X + 10,
+  y
+);
 drawText(", which is non-refundable.", col2X + 80, y);
 y -= rowHeight + 5;
 
@@ -706,11 +724,27 @@ y -= rowHeight + 5;
 drawText("You understand and accept the Policy as described in Policy Document:", col1X, y);
 y -= rowHeight;
 
-drawRect(col1X, y - 3, 80, 15, rgb(1, 1, 1));
-drawText(payload.policyAcknowledgment.policyCode, col1X + 5, y);
-drawRect(col1X + 85, y - 3, 250, 15, rgb(1, 1, 1));
-drawText(payload.policyAcknowledgment.policyName, col1X + 90, y);
-y -= rowHeight + 5;
+// drawRect(col1X, y - 3, 80, 15, rgb(1, 1, 1));
+// drawText(payload.policyAcknowledgment.policyCode, col1X + 5, y);
+// drawRect(col1X + 85, y - 3, 250, 15, rgb(1, 1, 1));
+// drawText(payload.policyAcknowledgment.policyName, col1X + 90, y);
+// y -= rowHeight + 5;
+
+const docs = payload.policyAcknowledgment.policyDocuments || [];
+if (docs.length > 0) {
+  docs.forEach((doc: { code: string; name: string }) => {
+    drawRect(col1X, y - 3, 80, 15, rgb(1, 1, 1));
+    drawText(doc.code || "-", col1X + 5, y);
+    drawRect(col1X + 85, y - 3, 250, 15, rgb(1, 1, 1));
+    drawText(doc.name || "-", col1X + 90, y);
+    y -= rowHeight + 5;
+  });
+} else {
+  drawText("— No policy document listed —", col1X, y);
+  y -= rowHeight + 5;
+}
+
+
 
 drawText("You agree to comply with the policy’s requirements at all times while serving.", col1X, y);
 y -= rowHeight;
@@ -1365,8 +1399,10 @@ wrappedLines.forEach((line) => {
                   ${(qty * unitPrice + shipping).toFixed(2)}
                 </td>
                 <td className="border px-3 py-2">
-                  {qty > 0 ? `$${((qty * unitPrice + shipping) / qty).toFixed(2)}` : '$0.00'}
-                </td>
+                  {Number(differenceMsg) === 0
+                    ? (qty > 0 ? `$${((qty * unitPrice + shipping) / qty).toFixed(2)}` : '$0.00')
+                    : 'Recap'}
+                </td>                
               </tr>
             </tbody>
           </table>
@@ -1442,33 +1478,93 @@ wrappedLines.forEach((line) => {
         </div>
 
         {/* Policy Document Info */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Policy Document Code
-            </label>
-            <input
-              type="text"
-              value={policyCode}
-              onChange={(e) => setPolicyCode(e.target.value)}
-              placeholder="e.g., MTOPS001"
-              className="w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
-            />
-          </div>
+{/* ✅ Policy Documents Section */}
+<div className="mb-6">
+  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+    Policy Documents
+  </label>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Policy Document Name
-            </label>
-            <input
-              type="text"
-              value={policyName}
-              onChange={(e) => setPolicyName(e.target.value)}
-              placeholder="e.g., Media Team Uniform Policy"
-              className="w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
-            />
-          </div>
-        </div>
+  {policyDocuments.map((doc, idx) => (
+    <div
+      key={idx}
+      className="grid grid-cols-[1fr_2fr_auto] items-center gap-3 mb-3 p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800/60"
+    >
+      {/* Policy Document Code */}
+      <input
+        type="text"
+        value={doc.code}
+        onChange={(e) => {
+          const newDocs = [...policyDocuments];
+          newDocs[idx].code = e.target.value;
+          setPolicyDocuments(newDocs);
+        }}
+        placeholder="e.g., MTOPS001"
+        className="w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+      />
+
+      {/* Policy Document Name */}
+      <input
+        type="text"
+        value={doc.name}
+        onChange={(e) => {
+          const newDocs = [...policyDocuments];
+          newDocs[idx].name = e.target.value;
+          setPolicyDocuments(newDocs);
+        }}
+        placeholder="e.g., Media Team Uniform Policy"
+        className="w-full rounded border border-gray-400 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-gray-800 dark:text-gray-100"
+      />
+
+      {/* Delete icon button */}
+      <button
+        type="button"
+        onClick={() =>
+          setPolicyDocuments(policyDocuments.filter((_, i) => i !== idx))
+        }
+        title="Remove this document"
+        className="flex items-center justify-center text-red-600 hover:text-red-800 transition-colors p-2"
+      >
+        {/* Trash Icon */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.8}
+          stroke="currentColor"
+          className="w-5 h-5"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M6 7h12M9 7V4h6v3m-7 4h8m-1 0v8a2 2 0 01-2 2H9a2 2 0 01-2-2V11z"
+          />
+        </svg>
+      </button>
+    </div>
+  ))}
+
+  {/* Add button */}
+  <button
+    type="button"
+    onClick={() =>
+      setPolicyDocuments([...policyDocuments, { code: '', name: '' }])
+    }
+    className="mt-2 flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.8}
+      stroke="currentColor"
+      className="w-5 h-5"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+    </svg>
+    Add Policy Document
+  </button>
+</div>
+
 
         {/* Agreement Checkbox */}
 
