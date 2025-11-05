@@ -32,7 +32,7 @@ export async function middleware(request: Request) {
   const tokenCookie = (request as any).cookies.get('__session')
   const token = typeof tokenCookie === 'string' ? tokenCookie : tokenCookie?.value
 
-  const publicPaths = ['/', '/install' , '/signin', '/forgot-password']
+  const publicPaths = ['/', '/install' , '/signin', '/forgot-password', '/daftar']
   const isPublic = publicPaths.some(
     (publicPath) => pathname === publicPath || pathname.startsWith(publicPath + '/')
   )
