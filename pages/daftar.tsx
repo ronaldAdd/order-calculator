@@ -1,5 +1,6 @@
 'use client';
 
+//daftar captcha
 import React, { useEffect, useState } from 'react';
 
 // Biar TypeScript gak error
